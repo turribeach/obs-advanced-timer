@@ -1,5 +1,7 @@
 obs           = obslua
 source_name   = ""
+source_name2  = ""
+source_name3  = ""
 
 stop_text     = ""
 mode          = ""
@@ -412,6 +414,8 @@ function script_properties()
 	obs.obs_property_set_long_description(f_prop, "%d - days\n%0h - hours with leading zero (00..23)\n%h - hours (0..23)\n%0H - hours with leading zero (00..infinity)\n%H - hours (0..infinity)\n%0m - minutes with leading zero (00..59)\n%m - minutes (0..59)\n%0M - minutes with leading zero (00..infinity)\n%M - minutes (0..infinity)\n%0s - seconds with leading zero (00..59)\n%s - seconds (0..59)\n%0S - seconds with leading zero (00..infinity)\n%S - seconds (0..infinity)\n%t - tenths\n%2t - hundredths\n%3t - thousandths")
 
 	local p = obs.obs_properties_add_list(props, "source", "Text source", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
+	local p1 = obs.obs_properties_add_list(props, "source2", "UK Time", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
+	local p2 = obs.obs_properties_add_list(props, "source3", "India Time", obs.OBS_COMBO_TYPE_EDITABLE, obs.OBS_COMBO_FORMAT_STRING)
 	local sources = obs.obs_enum_sources()
 	if sources ~= nil then
 		for _, source in ipairs(sources) do
@@ -419,9 +423,12 @@ function script_properties()
 			if source_id == "text_gdiplus" or source_id == "text_ft2_source" then
 				local name = obs.obs_source_get_name(source)
 				obs.obs_property_list_add_string(p, name, name)
+				obs.obs_property_list_add_string(p1, name, name)
+				obs.obs_property_list_add_string(p2, name, name)
 			end
 		end
 	end
+
 	obs.source_list_release(sources)
 
 	obs.obs_properties_add_text(props, "stop_text", "Countdown final text", obs.OBS_TEXT_DEFAULT)
@@ -439,6 +446,30 @@ function script_properties()
 	return props
 end
 
+function set_current_time_text(uk_time, india_time)
+
+    local source = obs.obs_get_source_by_name(source_name2)
+
+    if source ~= nil then
+        local settings = obs.obs_data_create()
+        obs.obs_data_set_string(settings, "text", uk_time)
+        obs.obs_source_update(source, settings)
+        obs.obs_data_release(settings)
+        obs.obs_source_release(source)
+    end
+
+    local source = obs.obs_get_source_by_name(source_name3)
+
+    if source ~= nil then
+        local settings = obs.obs_data_create()
+        obs.obs_data_set_string(settings, "text", india_time)
+        obs.obs_source_update(source, settings)
+        obs.obs_data_release(settings)
+        obs.obs_source_release(source)
+    end
+
+end
+
 function script_description()
 	return "Sets a text source to act as a timer with advanced options. Hotkeys can be set for starting/stopping and to the reset timer."
 end
@@ -450,6 +481,8 @@ function script_update(settings)
 	mode = obs.obs_data_get_string(settings, "mode")
 	a_mode = obs.obs_data_get_string(settings, "a_mode")
 	source_name = obs.obs_data_get_string(settings, "source")
+	source_name2 = obs.obs_data_get_string(settings, "source2")
+	source_name3 = obs.obs_data_get_string(settings, "source3")
 	stop_text = obs.obs_data_get_string(settings, "stop_text")
 	local year = obs.obs_data_get_int(settings, "year")
 	local month = obs.obs_data_get_int(settings, "month")
@@ -459,6 +492,20 @@ function script_update(settings)
 	local second = obs.obs_data_get_int(settings, "seconds")
 	format = obs.obs_data_get_string(settings, "format")
 	up_when_finished = obs.obs_data_get_bool(settings, "countup_countdown_finished")
+	
+	uk_time = hour .. ':' .. string.format("%02d", minute) .. ' GMT'
+	
+	if minute >= 30 then
+		india_hour = hour + 1 + 5
+		india_minute = string.format("%02d", minute - 30)
+	else
+		india_hour = hour + 5
+		india_minute = minute + 30
+	end
+	
+	
+	
+	india_time = india_hour .. ':' .. india_minute .. ' IST'
 
 	if mode == "Countdown" then
 		cur_time = obs.obs_data_get_int(settings, "duration") * 1000000000
@@ -477,6 +524,7 @@ function script_update(settings)
 	end
 
 	set_time_text(cur_time, format)
+	set_current_time_text(uk_time, india_time)
 
 	if global == false and paused == false then
 		start_timer()
@@ -522,4 +570,5 @@ function script_load(settings)
 	settings_ = settings
 
 	script_update(settings)
+	
 end
